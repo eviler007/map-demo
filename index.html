@@ -1,0 +1,213 @@
+<html lang="zh">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    #chart {
+      width: 800px;
+      height: 600px;
+      border: 1px solid #ddd;
+    }
+    #tooltip {
+      /* transition: all .1s; */
+    }
+  </style>
+</head>
+
+<body>
+  <div id="chart"></div>
+  <div id="tooltip" style="position: absolute; display: none; background: #fff0">
+    <div style="padding: 10px;">
+      <div style="height: 0px; background: transparent;"></div>
+      <div style="background: #fff">
+        <div>各种信息</div>
+        <div id="tooltip-chart" style="width: 150px; height: 32px;">
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.2.2/dist/echarts.min.js"></script>
+  <script src="./geojson.js"></script>
+  <script>
+    var chinaGeoCoordMap = {
+      '黑龙江': [127.9688, 45.368],
+      '内蒙古': [110.3467, 41.4899],
+      "吉林": [125.8154, 44.2584],
+      '北京': [116.4551, 40.2539],
+      "辽宁": [123.1238, 42.1216],
+      "河北": [114.4995, 38.1006],
+      "天津": [117.4219, 39.4189],
+      "山西": [112.3352, 37.9413],
+      "陕西": [109.1162, 34.2004],
+      "甘肃": [103.5901, 36.3043],
+      "宁夏": [106.3586, 38.1775],
+      "青海省": [101.4038, 36.8207],
+      "新疆": [87.9236, 43.5883],
+      "西藏": [91.11, 29.97],
+      "四川": [103.9526, 30.7617],
+      "重庆": [108.384366, 30.439702],
+      "山东": [117.1582, 36.8701],
+      "河南": [113.4668, 34.6234],
+      "江苏": [118.8062, 31.9208],
+      "安徽": [117.29, 32.0581],
+      "湖北": [114.3896, 30.6628],
+      "浙江": [119.5313, 29.8773],
+      "福建": [119.4543, 25.9222],
+      "江西": [116.0046, 28.6633],
+      "湖南": [113.0823, 28.2568],
+      "贵州": [106.6992, 26.7682],
+      "云南": [102.9199, 25.4663],
+      "广东": [113.12244, 23.009505],
+      "广西": [108.479, 23.1152],
+      "海南": [110.3893, 19.8516],
+      '上海': [121.4648, 31.2891]
+    };
+
+    var chinaDatas = [
+      {
+        name: '西宁',
+        value: [101.4038, 36.8207],
+        data: 16,
+        change: 5.2,
+        itemStyle: {
+          color: 'red'
+        }
+      }
+    ]
+    
+    console.time('map render')
+    const chart = window.echarts.init(document.querySelector('#chart'))
+    const option = {
+      tooltip: {
+        trigger: 'item'
+      },
+      geo: {
+        map: 'china',
+        zoom: 1.2,
+        label: {
+          show: false,
+          emphasis: {
+            show: false,
+          }
+        },
+        roam: true,
+      },
+      series: [
+        {
+          type: 'map',
+          map: 'china',
+          geoIndex: 0
+        },
+        {
+          type: 'scatter',
+          coordinateSystem: 'geo',
+          silent: true,
+          data: chinaDatas,
+          label: {
+            show: true,
+            position: 'bottom',
+            align: 'center',
+            formatter: params => {
+              const infoObj = params.data
+              const { name, data, change } = infoObj
+              let res = `{rt|${data}}{n|\n\n}`
+              res += `{rtrb|${data}${change}}`
+              return res
+            },
+            rich: {
+              n: {
+                fontSize: 6
+              },
+              rt: {
+                color: 'red'
+              },
+              rtrb: {
+                color: 'red',
+                borderColor: 'red',
+                background: 'rgba(237,45,0,0.10)',
+                borderWidth: 1,
+                borderRadius: 2,
+                height: 16,
+                lineHeight: 16,
+                verticalAlign: 'middle',
+                padding: [3, 4, 0, 4]
+              }
+            }
+          }
+        }
+      ],
+      tooltip: {
+        show: true,
+        enterable: true,
+        // transitionDuration: 0,
+        // showDelay: 0,
+        // hideDelay: 1000000000,
+        position: (point, params, rect) => {
+          tooltipPosChange(point)
+        },
+        formatter: params => {
+          return ``
+        },
+        backgroundColor: 'rgba(255, 255, 255, 0)',
+        padding: 0,
+        borderWidth: 0,
+        extraCssText: 'box-shadow: none'
+      }
+    }
+    chart.setOption(option)
+    console.timeEnd('map render')
+
+    const tooltipDom = document.querySelector('#tooltip')
+    let tipChart = window.echarts.init(document.querySelector('#tooltip-chart'))
+    let hideTimer = null
+    chart.on('mouseover', (e) => {
+      const tipOption = {
+        xAxis: {
+          type: 'category',
+          data: ['01-01', '01-02', '01-03']
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: [
+          {
+            type: 'line',
+            data: [3, 1, 2]
+          }
+        ]
+      }
+      tipChart.setOption(tipOption)
+
+      if (hideTimer) {
+        clearTimeout(hideTimer)
+        hideTimer = null
+      }
+      tooltipDom.style.display = 'block'
+    })
+    chart.on('mouseout', (e) => {
+      if (hideTimer) {
+        clearTimeout(hideTimer)
+        hideTimer = null
+      }
+      hideTimer = setTimeout(() => {
+        tooltipDom.style.display = 'none'
+      }, 100)
+    })
+    tooltipDom.addEventListener('mouseover', () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer)
+        hideTimer = null
+      }
+      tooltipDom.style.display = 'block' 
+    })
+    function tooltipPosChange(point) {
+      tooltipDom.style.left = point[0] - 12
+      tooltipDom.style.top = point[1] + 16
+    }
+  </script>
+</body>
+
+</html>
